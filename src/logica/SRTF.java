@@ -1,18 +1,26 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
 package logica;
 
 import java.util.ArrayList;
 
-public class FCFS implements gestor {
-    int tiempo_ejecución;
+/**
+ *
+ * @author wramos
+ */
+public class SRTF implements gestor{
 
+    int tiempo_ejecución;
+    
     @Override
     public void setTiempo_ejecución(int tiempo_ejecución) {
-        this.tiempo_ejecución = tiempo_ejecución;
+        this.tiempo_ejecución = tiempo_ejecución;//To change body of generated methods, choose Tools | Templates.
     }
-    
-    
+
     @Override
-    public void cambiar_estado(String estado,Proceso pr) {
+    public void cambiar_estado(String estado, Proceso pr) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
@@ -68,32 +76,30 @@ public class FCFS implements gestor {
         
         if (cambio){
            this.escorger_ejecución(pr); 
-        }
-        
- 
-        //
-        
-
-        //To change body of generated methods, choose Tools | Templates.
+        } //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
     public int escorger_ejecución(ArrayList<Proceso> pr) {
-        
+        ArrayList<Proceso> temp_array = new ArrayList<Proceso>();
         for (Proceso pro : pr ){
-            
             if (pro.estado != "bloqueado" && pro.estado != "terminado" && pro.estado == "esperando"){
-                pro.estado = "ejecución";
-                pro.tiempo_ejecutandose = pro.tiempo_ejecutandose + 1;
-                break;
+                temp_array.add(pro);
             }
-            
         }
-        return 0;
-        
-
-//To change body of generated methods, choose Tools | Templates.
+        if (temp_array.isEmpty()){
+            return 0;
+        } 
+        Proceso temp_pro = temp_array.get(0);
+        for (Proceso pro : temp_array ){
+            if (pro.estado != "bloqueado" && pro.estado != "terminado" && pro.estado == "esperando" 
+                    && temp_pro.getTamano() - temp_pro.tiempo_ejecutandose > pro.getTamano() - pro.tiempo_ejecutandose){
+                temp_pro = pro;
+            }
+        }
+        temp_pro.estado = "ejecución";
+        temp_pro.tiempo_ejecutandose = temp_pro.tiempo_ejecutandose + 1;
+        return 0;//To change body of generated methods, choose Tools | Templates.
     }
-
-    	
+    
 }

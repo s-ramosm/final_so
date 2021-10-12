@@ -36,8 +36,11 @@ import javax.swing.SpinnerNumberModel;
 import javax.swing.border.EtchedBorder;
 import logica.FCFS;
 import logica.Proceso;
+import logica.RR;
 import logica.SJF;
+import logica.SRTF;
 import logica.gestor;
+
 
 
 
@@ -47,7 +50,7 @@ class Pintar extends Thread {
  int x;
  int y;
  gestor GS;
-
+ String cola;
     public void setGS(gestor GS) {
         this.GS = GS;
     }
@@ -99,31 +102,99 @@ class Pintar extends Thread {
          return Color.RED;
      }
      
+     if (pr.estado == "despachador"){
+         return Color.BLUE;
+     }
+     
      return Color.WHITE;
  }
+
+    public void setCola(String cola) {
+        this.cola = cola;
+    }
  
- public void run() { 
+ 
+ 
+public void run() {
+    boolean run = true;
+    boolean borrar = false;
     int tiempo_ejecucion = 0;
-    int x = 30;
-    while(true){
+    int x = 80;
+    int xTexto = 10;
+    int posNum = 0;
+	JLabel procesoActivo = new JLabel();
+	JLabel tituloActivo = new JLabel();
         
+    
+    while(run){
         GS.validar_procesos(procesos);
-        
         for (Proceso item : this.procesos){
+        	
+        	JLabel nProceso = new JLabel();
+        	nProceso.setText(item.getNombre());
+        	nProceso.setBounds(xTexto, item.cordy, 60, 10);
+        	nProceso.setFont(new Font("Tahoma", Font.PLAIN, 10));
+        	this.jp.add(nProceso);
         
             JPanel jp = new JPanel();
             jp.setBackground(this.definir_color(item));
             jp.setBounds(x, item.cordy, 10, 10);
         
+            if (this.cola != null){
+                JLabel num = new JLabel();
+                num.setText(cola);
+                num.setBounds(0,0, 10, 10);
+                num.setFont(new Font("Tahoma", Font.PLAIN, 7));
+                jp.add(num);
+            }
             this.jp.add(jp);
             this.jp.revalidate();
             this.jp.repaint();
             
-        
+            if (item.estado=="despachador"){
+                borrar = true;
+            }
+            
+            posNum = item.cordy;
+            
+            if(item.estado == "ejecución") {
+            	procesoActivo.setText(item.getNombre());
+            }
+            
         }
+        if (borrar){
+            procesos.remove(procesos.size()-1); 
+            borrar = false;
+        }
+        
+        posNum = posNum + 15;
+        JLabel num = new JLabel();
+        num.setText(String.valueOf(tiempo_ejecucion));
+        num.setBounds(x, posNum, 10, 10);
+        num.setFont(new Font("Tahoma", Font.PLAIN, 7));
+        this.jp.add(num);
+        
+        tituloActivo.setText("Proceso Activo");
+        tituloActivo.setBounds(600, 10, 100, 10);
+        tituloActivo.setFont(new Font("Tahoma", Font.PLAIN, 10));
+        this.jp.add(tituloActivo);
+        
+        procesoActivo.setBounds(600, 25, 100, 10);
+        tituloActivo.setFont(new Font("Tahoma", Font.PLAIN, 10));
+        this.jp.add(procesoActivo);
+        
+        
         x = x+10;
         tiempo_ejecucion = tiempo_ejecucion +1;
         GS.setTiempo_ejecución(tiempo_ejecucion);
+        
+        run = false;
+        for (Proceso item : this.procesos){
+            if (item.estado != "terminado"){
+                run = true;
+            }
+        }
+        
         try {
             Thread.sleep(1000);
         } catch (InterruptedException ex) {
@@ -134,9 +205,42 @@ class Pintar extends Thread {
  } 
 }
 
+
+class cola {
+    
+    gestor GS;
+    int x;
+    int y;
+    JPanel jp;
+    ArrayList<Proceso> procesos;
+    Pintar pintor;
+    Vector v = new Vector();
+    int minimo;
+    int maximo;
+    
+    
+    public cola(Vector v, int minimo,int maximo) {
+        this.minimo = minimo;
+        this.maximo = maximo;
+        this.procesos = new ArrayList<Proceso>();
+        int y = 5;
+        int index = 0;
+        
+        for (Object item : v){
+            if(this.minimo<= (int)((Vector)item).get(2) && this.maximo> (int)((Vector)item).get(2) ){
+                this.v.add(item);
+            }
+        }
+        this.pintor = new Pintar(this.v);
+    }
+    
+}
+
+
 @SuppressWarnings("serial")
 public class JFramePrincipal extends JFrame implements ActionListener{
-
+        public boolean retroalimentacion = false;
+        public boolean colas = false;
         private gestor GS;
 	private int modelo = 1;				//Modelo seleccionado
 	private int asignacion = 1;			//Algoritmos de asignacion
@@ -160,11 +264,11 @@ public class JFramePrincipal extends JFrame implements ActionListener{
 	
 	private JPanel panelModPlanificacion;
 	private ButtonGroup btgModMemoria;
-	private JRadioButton rdbtnFCFS;
-	private JRadioButton rdbtnSPN;
-	private JRadioButton rdbtnSRTF;
-	private JRadioButton rdbtnRR;
-	private JRadioButton rdbtnDerPreferente;
+	private JButton rdbtnFCFS;
+	private JButton rdbtnSPN;
+	private JButton rdbtnSRTF;
+	private JButton rdbtnRR;
+	private JButton rdbtnDerPreferente;
 	private JCheckBox chckbxCompactacion;
 	
 	private JPanel panelTabla;
@@ -190,7 +294,7 @@ public class JFramePrincipal extends JFrame implements ActionListener{
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public JFramePrincipal() {
-                GS = new SJF();
+                GS = new RR();
                 
 		setTitle("Simulador Gestor de Memoria");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -294,32 +398,62 @@ public class JFramePrincipal extends JFrame implements ActionListener{
                 panelModPlanificacion.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Algoritmo de Planificaci\u00F3n", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
 		panelModPlanificacion.setLayout(null);
 		
-		rdbtnFCFS = new JRadioButton("<html>FCFS \u2013 First come, first<br />served</html>");
+		rdbtnFCFS = new JButton("<html>FCFS</html>");
 		rdbtnFCFS.setSelected(true);
 		rdbtnFCFS.setBounds(10, 25, 197, 29);
+                rdbtnFCFS.addActionListener(new ActionListener() { 
+                    public void actionPerformed(ActionEvent e) {
+                      GS = new FCFS(); 
+                    }
+                  });
 		panelModPlanificacion.add(rdbtnFCFS);
 		
-		rdbtnSPN = new JRadioButton("<html>SPN \u2013 Shorted process<br />next</html>");
+		rdbtnSPN = new JButton("<html>SJF</html>");
 		rdbtnSPN.setBounds(10, 56, 197, 29);
+                rdbtnSPN.addActionListener(new ActionListener() { 
+                    public void actionPerformed(ActionEvent e) {
+                      GS = new SJF(); 
+                    }
+                  });
 		panelModPlanificacion.add(rdbtnSPN);
 		
-		rdbtnSRTF = new JRadioButton("<html>SRTF \u2013 Shortest remaining <br />time first</html>");
+		rdbtnSRTF = new JButton("<html>SRTF</html>");
 		rdbtnSRTF.setBounds(10, 87, 197, 29);
+                rdbtnSRTF.addActionListener(new ActionListener() { 
+                    public void actionPerformed(ActionEvent e) {
+                      GS = new SRTF(); 
+                    }
+                  });
 		panelModPlanificacion.add(rdbtnSRTF);
 			
-		rdbtnRR = new JRadioButton("<html>RR \u2013 Round Robin</html>");
+		rdbtnRR = new JButton("<html>RR</html>");
 		rdbtnRR.setBounds(10, 118, 197, 21);
+                rdbtnRR.addActionListener(new ActionListener() { 
+                    public void actionPerformed(ActionEvent e) {
+                      GS = new RR(); 
+                    }
+                  }); 
 		panelModPlanificacion.add(rdbtnRR);
 		
-		rdbtnDerPreferente = new JRadioButton("<html>Derecho preferente</html>");
-		rdbtnDerPreferente.setBounds(10, 141, 197, 21);
-		panelModPlanificacion.add(rdbtnDerPreferente);
 		
 		chckbxCompactacion = new JCheckBox("<html>Retroalimentacion</html>");
 		chckbxCompactacion.setFont(new Font("Tahoma", Font.PLAIN, 11));
 		chckbxCompactacion.setBounds(35, 164, 172, 21);
 		panelModPlanificacion.add(chckbxCompactacion);
 		
+                rdbtnDerPreferente = new JButton("<html>Derecho preferente</html>");
+		rdbtnDerPreferente.setBounds(10, 141, 197, 21);
+                rdbtnDerPreferente.addActionListener(new ActionListener() { 
+                    public void actionPerformed(ActionEvent e) {
+                        if (chckbxCompactacion.isSelected()) {
+                            retroalimentacion = true;
+                        }else {
+                            retroalimentacion = true;
+                        }
+                        colas = !colas;
+                    }
+                });
+		panelModPlanificacion.add(rdbtnDerPreferente);
 		//Agrega botones seleccion de proceso a un grupo
 		btgModMemoria = new ButtonGroup();
 		btgModMemoria.add(rdbtnFCFS);
@@ -497,41 +631,41 @@ public class JFramePrincipal extends JFrame implements ActionListener{
 	public void actionPerformed(ActionEvent event) {
 		
 		//Boton iniciar/detener
-		if(event.getSource() == tglbtnON_OFF){
-					
-			JToggleButton tglbON_OFF = (JToggleButton)event.getSource();
+        if(event.getSource() == tglbtnON_OFF){
+
+                JToggleButton tglbON_OFF = (JToggleButton)event.getSource();
 			
             if(tglbON_OFF.isSelected()){
-                int x,y;
-                x = 0;
-                y = 0;
-                
-                
-                Pintar hilo = new Pintar(modeloTabla.getDataVector());
-                hilo.setJp(panelMemoria);
-                hilo.setGS(GS);
-                hilo.start();
-            	//while (true){
-                //    for (Object item :  modeloTabla.getDataVector()){
-                //        System.out.println(((Vector)item).get(0));
-                //        JPanel jp = new JPanel();
-                //        jp.setBackground(Color.BLUE);
-                //        jp.setBounds(x, y, 10, 10);
-                //        x = x+10;
-                //        panelMemoria.add(jp);
-                //        System.out.println("Label agregado");
-                //        panelMemoria.revalidate();
-                //        panelMemoria.repaint();
-                //    }
+                ArrayList<cola> Colas = new ArrayList<cola>();
+                if (!colas){
+                    int x,y;
+                    x = 0;
+                    y = 0;
+
+
+                    Pintar hilo = new Pintar(modeloTabla.getDataVector());
+                    hilo.setJp(panelMemoria);
+                    hilo.setGS(GS);
+                    hilo.start();
+                }
+                else{
                     
-                //    y = y+10;
-                //    try {
-                //        Thread.sleep(1000);
-                //    } catch (InterruptedException ex) {
-                //        Logger.getLogger(JFramePrincipal.class.getName()).log(Level.SEVERE, null, ex);
-                //    }
+                    cola cola1 = new cola(modeloTabla.getDataVector(), 0, 8);
+                    cola1.pintor.setCola("0");
+                    Colas.add(cola1);
+                    cola cola2 = new cola(modeloTabla.getDataVector(), 8, 10);
+                    Colas.add(cola2);
+                    cola2.pintor.setCola("1");
+                    cola cola3 = new cola(modeloTabla.getDataVector(), 10, 100);
+                    Colas.add(cola3);
+                    cola3.pintor.setCola("2");
                     
-                //}
+                    for (cola cl: Colas){
+                        System.out.println(cl.pintor.procesos);
+                    }
+                    
+                    
+                }
                 
             }else {
             	//habilitarDetenido();
@@ -542,9 +676,10 @@ public class JFramePrincipal extends JFrame implements ActionListener{
 	
 		}
 		//Boton Agregar proceso
-		if(event.getSource() == btnAgregarProceso) { 	
-        	agregarPoceso();
-		}
+        if(event.getSource() == btnAgregarProceso) { 	
+            agregarPoceso();
+        }
+        
 		
 	}
 	
